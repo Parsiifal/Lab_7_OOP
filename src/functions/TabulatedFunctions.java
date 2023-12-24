@@ -25,15 +25,51 @@ public class TabulatedFunctions
 		return functionFactory.createTabulatedFunction(leftX, rightX, values);
 	}
 
+	public static TabulatedFunction createTabulatedFunction(Class<? extends TabulatedFunction> clazz, FunctionPoint[] points)
+	{
+		try
+		{
+			return clazz.getConstructor(FunctionPoint[].class).newInstance((Object) points);
+		}
+		catch (Exception e)
+		{
+			throw new IllegalArgumentException(e);
+		}
+	}
+
+	public static TabulatedFunction createTabulatedFunction(Class<? extends TabulatedFunction> clazz, double leftX, double rightX, int pointsCount)
+	{
+		try
+		{
+			return clazz.getConstructor(double.class, double.class, int.class).newInstance(leftX, rightX, pointsCount);
+		}
+		catch (Exception e)
+		{
+			throw new IllegalArgumentException(e);
+		}
+	}
+
+	public static TabulatedFunction createTabulatedFunction(Class<? extends TabulatedFunction> clazz, double leftX, double rightX, double[] values)
+	{
+		try
+		{
+			return clazz.getConstructor(double.class, double.class, double[].class).newInstance(leftX, rightX, values);
+		}
+		catch (Exception e)
+		{
+			throw new IllegalArgumentException(e);
+		}
+	}
+
 	public static TabulatedFunction tabulate(Function function, double leftX, double rightX, int pointsCount)
 	{
-		if (leftX < function.getLeftDomainBorder() || rightX > function.getRightDomainBorder())
-		{
-			throw new IllegalArgumentException("Диапазон находится за пределами области");
-		}
 		if (leftX >= rightX || pointsCount < 2)
 		{
 			throw new IllegalArgumentException("Некорректные параметры");
+		}
+		if (leftX < function.getLeftDomainBorder() || rightX > function.getRightDomainBorder())
+		{
+			throw new IllegalArgumentException("Диапазон находится за пределами области");
 		}
 
 		double step = (rightX - leftX) / (pointsCount - 1);
@@ -46,6 +82,29 @@ public class TabulatedFunctions
 		}
 
 		return createTabulatedFunction(values);
+	}
+
+	public static TabulatedFunction tabulate(Class<? extends TabulatedFunction> clazz, Function function, double leftX, double rightX, int pointsCount)
+	{
+		if (leftX >= rightX || pointsCount < 2)
+		{
+			throw new IllegalArgumentException("Некорректные параметры");
+		}
+		if (leftX < function.getLeftDomainBorder() || rightX > function.getRightDomainBorder())
+		{
+			throw new IllegalArgumentException("Диапазон находится за пределами области");
+		}
+
+		double step = (rightX - leftX) / (pointsCount - 1);
+		FunctionPoint[] values = new FunctionPoint[pointsCount];
+
+		for (int i = 0; i < pointsCount; i++)
+		{
+			double x = leftX + i * step;
+			values[i] = new FunctionPoint(x, function.getFunctionValue(x));
+		}
+
+		return createTabulatedFunction(clazz, values);
 	}
 
 	public static void outputTabulatedFunction(TabulatedFunction function, OutputStream out) throws IOException
@@ -79,6 +138,26 @@ public class TabulatedFunctions
 				values[i] = new FunctionPoint(datInStr.readDouble(), datInStr.readDouble());
 			}
 			return createTabulatedFunction(values);
+		}
+		finally
+		{
+			datInStr.close();
+		}
+	}
+
+	public static TabulatedFunction inputTabulatedFunction(Class<? extends TabulatedFunction> clazz, InputStream in) throws IOException
+	{
+		DataInputStream datInStr = new DataInputStream(in);
+		try
+		{
+			int pointsCount = datInStr.readInt();
+			FunctionPoint[] values = new FunctionPoint[pointsCount];
+
+			for (int i = 0; i < pointsCount; i++)
+			{
+				values[i] = new FunctionPoint(datInStr.readDouble(), datInStr.readDouble());
+			}
+			return createTabulatedFunction(clazz, values);
 		}
 		finally
 		{
@@ -126,6 +205,27 @@ public class TabulatedFunctions
 			values[i] = new FunctionPoint(x, y);
 		}
 		return createTabulatedFunction(values);
+	}
+
+	public static TabulatedFunction readTabulatedFunction(Class<? extends TabulatedFunction> clazz, Reader in) throws IOException
+	{
+		StreamTokenizer token = new StreamTokenizer(in);
+		token.parseNumbers();
+		token.nextToken();
+		int pointsCount = (int) token.nval;
+
+		FunctionPoint[] values = new FunctionPoint[pointsCount];
+		double x, y;
+
+		for (int i = 0; i < pointsCount; i++)
+		{
+			token.nextToken();
+			x = token.nval;
+			token.nextToken();
+			y = token.nval;
+			values[i] = new FunctionPoint(x, y);
+		}
+		return createTabulatedFunction(clazz, values);
 	}
 
 }
